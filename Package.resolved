@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "identifiedenumcases",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/danielsincere/IdentifiedEnumCases.git",
+      "state" : {
+        "revision" : "c2452e55d47f6fed934283cab78106940909cb68",
+        "version" : "1.0.0"
+      }
+    },
+    {
       "identity" : "swift-case-paths",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-case-paths.git",
@@ -14,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-syntax",
       "state" : {
-        "revision" : "fa8f95c2d536d6620cc2f504ebe8a6167c9fc2dd",
-        "version" : "510.0.1"
+        "revision" : "64889f0c732f210a935a0ad7cda38f77f876262d",
+        "version" : "509.1.1"
       }
     },
     {

@@ -1,7 +1,9 @@
 import Foundation
 import CasePaths
+import IdentifiedEnumCases
 
 @CasePathable
+@IdentifiedEnumCases
 enum Token: Equatable {
   case illegal(String)
   case eof

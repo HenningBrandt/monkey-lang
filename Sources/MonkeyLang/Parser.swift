@@ -5,11 +5,14 @@ final class Parser {
   private let lexer: Lexer
   private var curToken: Token
   private var peekToken: Token
+  private var semanticCode: SemanticCode
   
   init(_ lexer: Lexer) {
     self.lexer = lexer
     self.curToken = lexer.nextToken()
     self.peekToken = lexer.nextToken()
+    self.semanticCode = SemanticCode()
+    setupExpressionParsers()
   }
   
   struct ParseError: Error {}
@@ -36,7 +39,7 @@ final class Parser {
     case .return:
       try parseReturnStatement()
     default:
-      throw ParseError()
+      try parseExpressionStatement()
     }
   }
   
@@ -65,6 +68,17 @@ final class Parser {
     return ReturnStatement(token: token, returnValue: EmptyExpression(token: token))
   }
   
+  private func parseExpressionStatement() throws -> ExpressionStatement {
+    let token = curToken
+    let expression = try parseExpression(usingPrecedence: .lowest)
+    
+    if peekToken == .semicolon {
+      nextToken()
+    }
+    
+    return ExpressionStatement(token: token, expression: expression)
+  }
+  
   // MARK: Token Helper
   
   private func nextToken() {
@@ -79,5 +93,68 @@ final class Parser {
     }
     nextToken()
     return res
+  }
+}
+
+// MARK: - Pratt Parser (Expressions)
+
+enum OperatorPrecedence: Int {
+  case lowest = 1
+  case equals // ==
+  case lessGreater // > or <
+  case sum // +
+  case product // *
+  case prefix // -X or !X
+  case call // myFunction(X)
+}
+
+extension Parser {
+  private func setupExpressionParsers() {
+    semanticCode.registerPrefix({ [unowned self] in self.parseIdentifier() }, forToken: .ident)
+  }
+  
+  private func parseExpression(
+    usingPrecedence precedence: OperatorPrecedence
+  ) throws -> any Expression {
+    guard let prefixParser = semanticCode[prefix: curToken.caseID] else {
+      throw ParseError()
+    }
+    return try prefixParser()
+  }
+  
+  private func parseIdentifier() -> Identifier {
+    Identifier(token: curToken, value: curToken.literal)
+  }
+}
+
+struct SemanticCode {
+  typealias PrefixParser = () throws -> any Expression
+  typealias InfixParser = (any Expression) throws -> any Expression
+  
+  private var prefixParsers: [Token.CaseID: PrefixParser] = [:]
+  private var infixParsers: [Token.CaseID: InfixParser] = [:]
+  
+  mutating func registerPrefix(_ parser: @escaping PrefixParser, forToken tokenID: Token.CaseID) {
+    prefixParsers[tokenID] = parser
+  }
+  
+  mutating func registerInfix(_ parser: @escaping InfixParser, forToken tokenID: Token.CaseID) {
+    infixParsers[tokenID] = parser
+  }
+  
+  subscript(prefix tokenID: Token.CaseID) -> PrefixParser? {
+    prefixParsers[tokenID]
+  }
+
+  subscript(infix tokenID: Token.CaseID) -> InfixParser? {
+    infixParsers[tokenID]
+  }
+}
+
+// MARK: - Convenience Methods
+
+extension Parser {
+  static func parse(_ input: String) throws -> Program {
+    try Parser(Lexer(input)).parseProgram()
   }
 }
