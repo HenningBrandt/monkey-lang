@@ -22,7 +22,7 @@ protocol Expression: Node { }
 
 struct LetStatement: Statement {
   var token: Token
-  var name: Identifier
+  var name: IdentifierExpression
   var value: any Expression
   
   var description: String {
@@ -33,15 +33,6 @@ struct LetStatement: Statement {
     lhs.token == rhs.token &&
     lhs.name == lhs.name &&
     isEqual(lhs: lhs.value, rhs: rhs.value)
-  }
-}
-
-struct Identifier: Expression {
-  var token: Token
-  var value: String
-  
-  var description: String {
-    value
   }
 }
 
@@ -59,14 +50,6 @@ struct ReturnStatement: Statement {
   }
 }
 
-struct EmptyExpression: Expression {
-  var token: Token
-  
-  var description: String {
-    ""
-  }
-}
-
 struct ExpressionStatement: Statement {
   var token: Token
   var expression: any Expression
@@ -78,6 +61,32 @@ struct ExpressionStatement: Statement {
   static func == (lhs: ExpressionStatement, rhs: ExpressionStatement) -> Bool {
     lhs.token == rhs.token &&
     isEqual(lhs: lhs.expression, rhs: rhs.expression)
+  }
+}
+
+struct EmptyExpression: Expression {
+  var token: Token
+  
+  var description: String {
+    ""
+  }
+}
+
+struct IdentifierExpression: Expression {
+  var token: Token
+  var value: String
+  
+  var description: String {
+    value
+  }
+}
+
+struct IntegerExpression: Expression {
+  var token: Token
+  var value: Int
+  
+  var description: String {
+    "\(value)"
   }
 }
 

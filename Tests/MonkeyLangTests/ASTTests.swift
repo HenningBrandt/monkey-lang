@@ -7,11 +7,11 @@ final class ASTTests: XCTestCase {
       statements: [
         LetStatement(
           token: .let,
-          name: Identifier(
+          name: IdentifierExpression(
             token: .ident("myVar"),
             value: "myVar"
           ),
-          value: Identifier(
+          value: IdentifierExpression(
             token: .ident("anotherVar"),
             value: "anotherVar"
           )

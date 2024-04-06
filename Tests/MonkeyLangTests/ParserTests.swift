@@ -49,7 +49,18 @@ final class ParserTests: XCTestCase {
     )
     
     XCTAssertEqual(program.statements.count, 1)
-    assertIdentifier(program.statements[0], name: "foobar")
+    assertIdentifierExpression(program.statements[0], name: "foobar")
+  }
+  
+  func assertIntegerExpression() throws {
+    let program = try Parser.parse(
+      """
+      5;
+      """
+    )
+    
+    XCTAssertEqual(program.statements.count, 1)
+    assertIntegerExpression(program.statements[0], value: 5)
   }
   
   // MARK: - Assertions
@@ -74,17 +85,31 @@ final class ParserTests: XCTestCase {
     XCTAssertEqual(statement.token.literal, "return")
   }
   
-  private func assertIdentifier(_ statement: any Statement, name: String) {
+  private func assertIdentifierExpression(_ statement: any Statement, name: String) {
     guard let statement = statement as? ExpressionStatement else {
       XCTFail("Expected ExpressionStatement but got \(type(of: statement))")
       return
     }
-    guard let expression = statement.expression as? Identifier else {
-      XCTFail("Expected Identifier but got \(type(of: statement.expression))")
+    guard let expression = statement.expression as? IdentifierExpression else {
+      XCTFail("Expected IdentifierExpression but got \(type(of: statement.expression))")
       return
     }
     
     XCTAssertEqual(expression.value, name)
     XCTAssertEqual(expression.token.literal, name)
+  }
+  
+  private func assertIntegerExpression(_ statement: any Statement, value: Int) {
+    guard let statement = statement as? ExpressionStatement else {
+      XCTFail("Expected ExpressionStatement but got \(type(of: statement))")
+      return
+    }
+    guard let expression = statement.expression as? IntegerExpression else {
+      XCTFail("Expected IntegerExpression but got \(type(of: statement.expression))")
+      return
+    }
+    
+    XCTAssertEqual(expression.value, value)
+    XCTAssertEqual(expression.token.literal, "\(value)")
   }
 }

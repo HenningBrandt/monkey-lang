@@ -46,7 +46,7 @@ final class Parser {
   private func parseLetStatement() throws -> LetStatement {
     let token = curToken
     let identName = try consumePeek(\.ident)
-    let name = Identifier(token: curToken, value: identName)
+    let name = IdentifierExpression(token: curToken, value: identName)
     try consumePeek(\.assign)
     
     // TODO: Implement expression parsing. Skip to semicolon for now.
@@ -111,8 +111,9 @@ enum OperatorPrecedence: Int {
 extension Parser {
   private func setupExpressionParsers() {
     semanticCode.registerPrefix({ [unowned self] in self.parseIdentifier() }, forToken: .ident)
+    semanticCode.registerPrefix({ [unowned self] in try self.parseInteger() }, forToken: .int)
   }
-  
+
   private func parseExpression(
     usingPrecedence precedence: OperatorPrecedence
   ) throws -> any Expression {
@@ -122,8 +123,15 @@ extension Parser {
     return try prefixParser()
   }
   
-  private func parseIdentifier() -> Identifier {
-    Identifier(token: curToken, value: curToken.literal)
+  private func parseIdentifier() -> IdentifierExpression {
+    IdentifierExpression(token: curToken, value: curToken.literal)
+  }
+  
+  private func parseInteger() throws -> IntegerExpression {
+    guard let value = Int(curToken.literal) else {
+      throw ParseError()
+    }
+    return IntegerExpression(token: curToken, value: value)
   }
 }
 
