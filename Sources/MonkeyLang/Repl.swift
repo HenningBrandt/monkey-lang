@@ -9,10 +9,8 @@ public final class Repl {
     print(Self.prompt, terminator: "")
     while let line = readLine(strippingNewline: true) {
       let lexer = Lexer(line)
-      var token = lexer.nextToken()
-      while token != .eof {
+      for token in lexer {
         print(token)
-        token = lexer.nextToken()
       }
       print(Self.prompt, terminator: "")
     }

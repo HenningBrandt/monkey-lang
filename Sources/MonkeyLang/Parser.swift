@@ -2,15 +2,15 @@ import Foundation
 import CasePaths
 
 final class Parser {
-  private let lexer: Lexer
+  private let tokens: Lexer.Iterator
   private var curToken: Token
   private var peekToken: Token
   private var semanticCode: SemanticCode
   
   init(_ lexer: Lexer) {
-    self.lexer = lexer
-    self.curToken = lexer.nextToken()
-    self.peekToken = lexer.nextToken()
+    self.tokens = lexer.makeIterator()
+    self.curToken = tokens.next() ?? .eof
+    self.peekToken = tokens.next() ?? .eof
     self.semanticCode = SemanticCode()
     setupExpressionParsers()
   }
@@ -83,7 +83,7 @@ final class Parser {
   
   private func nextToken() {
     curToken = peekToken
-    peekToken = lexer.nextToken()
+    peekToken = tokens.next() ?? .eof
   }
   
   @discardableResult
@@ -128,6 +128,7 @@ extension Parser {
   }
   
   private func parseInteger() throws -> IntegerExpression {
+    // TODO: Just use value from token
     guard let value = Int(curToken.literal) else {
       throw ParseError()
     }

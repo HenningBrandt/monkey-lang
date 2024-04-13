@@ -63,7 +63,7 @@ final class Lexer {
     }
   }
   
-  func nextToken() -> Token {
+  private func nextToken() -> Token {
     skipWhitespace()
 
     let token: Token
@@ -206,5 +206,29 @@ extension Token {
     case .else: "else"
     case .return: "return"
     }
+  }
+}
+
+extension Lexer: Sequence {
+  final class Iterator: IteratorProtocol {
+    private var reachedEof = false
+    private let lexer: Lexer
+    
+    init(lexer: Lexer) {
+      self.lexer = lexer
+    }
+  
+    func next() -> Token? {
+      guard !reachedEof else {
+        return nil
+      }
+      let token = lexer.nextToken()
+      reachedEof = token == .eof
+      return token
+    }
+  }
+
+  func makeIterator() -> Iterator {
+    Iterator(lexer: self)
   }
 }
