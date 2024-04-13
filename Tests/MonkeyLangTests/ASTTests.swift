@@ -1,4 +1,5 @@
 import XCTest
+import Nimble
 @testable import MonkeyLang
 
 final class ASTTests: XCTestCase {
@@ -19,6 +20,6 @@ final class ASTTests: XCTestCase {
       ]
     )
     
-    XCTAssertEqual(program.description, "let myVar = anotherVar;")
+    expect(program.description).to(equal("let myVar = anotherVar;"))
   }
 }

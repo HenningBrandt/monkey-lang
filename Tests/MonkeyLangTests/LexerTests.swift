@@ -1,30 +1,33 @@
 import XCTest
+import Nimble
 @testable import MonkeyLang
 
 final class LexerTests: XCTestCase {
     func testNextToken() throws {
-      let input = """
-      let five = 5;
-      let ten = 10;
-      
-      let add = fn(x, y) {
-        x + y;
-      };
-      
-      let result = add(five, ten);
-      !-/*5;
-      5 < 10 > 5;
-      
-      if (5 < 10) {
-        return true;
-      } else {
-        return false;
-      }
-      
-      10 == 10;
-      10 != 9;
-      """
-      let exptectedTokens: [Token] = [
+      let lexer = Lexer(
+        """
+        let five = 5;
+        let ten = 10;
+        
+        let add = fn(x, y) {
+          x + y;
+        };
+        
+        let result = add(five, ten);
+        !-/*5;
+        5 < 10 > 5;
+        
+        if (5 < 10) {
+          return true;
+        } else {
+          return false;
+        }
+        
+        10 == 10;
+        10 != 9;
+        """
+      )
+      let expectedTokens: [Token] = [
         .let, .ident("five"), .assign, .int(5), .semicolon,
         .let, .ident("ten"), .assign, .int(10), .semicolon,
         .let, .ident("add"), .assign, .function, .lparen, .ident("x"), .comma, .ident("y"), .rparen, .lbrace,
@@ -43,10 +46,6 @@ final class LexerTests: XCTestCase {
         .eof
       ]
       
-      let lexer = Lexer(input)
-      for expectedToken in exptectedTokens {
-        let token = lexer.nextToken()
-        XCTAssertEqual(expectedToken, token)
-      }
+      expect(Array(lexer)).to(equal(expectedTokens))
     }
 }

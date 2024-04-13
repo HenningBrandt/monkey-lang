@@ -1,4 +1,5 @@
 import XCTest
+import Nimble
 @testable import MonkeyLang
 
 final class ParserTests: XCTestCase {
@@ -11,13 +12,14 @@ final class ParserTests: XCTestCase {
       """
     )
     
-    XCTAssertEqual(program.statements.count, 3)
-    zip(program.statements, ["x", "y", "foobar"])
-      .forEach(assertLetStatement(_:name:))
+    expect(program.statements).to(haveCount(3))
+    ["x", "y", "foobar"].enumerated().forEach { index, name in
+      expect(program.statements[index]).to(beLetStatementWithName(name))
+    }
   }
   
   func testWrongLetStatements() throws {
-    XCTAssertThrowsError(
+    expect {
       try Parser.parse(
         """
         let x 5;
@@ -25,7 +27,8 @@ final class ParserTests: XCTestCase {
         let foobar = 838383;
         """
       )
-    )
+    }
+    .to(throwError())
   }
   
   func testReturnStatements() throws {
@@ -36,9 +39,9 @@ final class ParserTests: XCTestCase {
       return 838383;
       """
     )
-      
-    XCTAssertEqual(program.statements.count, 3)
-    program.statements.forEach(assertReturnStatement(_:))
+    
+    expect(program.statements).to(haveCount(3))
+    expect(program.statements).to(allPass(beReturnStatement()))
   }
   
   func testIndentifierExpression() throws {
@@ -48,8 +51,8 @@ final class ParserTests: XCTestCase {
       """
     )
     
-    XCTAssertEqual(program.statements.count, 1)
-    assertIdentifierExpression(program.statements[0], name: "foobar")
+    expect(program.statements).to(haveCount(1))
+    expect(program.statements[0]).to(beIdentifierExpressionWithName("foobar"))
   }
   
   func assertIntegerExpression() throws {
@@ -59,57 +62,7 @@ final class ParserTests: XCTestCase {
       """
     )
     
-    XCTAssertEqual(program.statements.count, 1)
-    assertIntegerExpression(program.statements[0], value: 5)
-  }
-  
-  // MARK: - Assertions
-  
-  private func assertLetStatement(_ statement: any Statement, name: String) {
-    guard let statement = statement as? LetStatement else {
-      XCTFail("Expected LetStatement but got \(type(of: statement))")
-      return
-    }
-    
-    XCTAssertEqual(statement.token.literal, "let")
-    XCTAssertEqual(statement.name.value, name)
-    XCTAssertEqual(statement.name.token.literal, name)
-  }
-  
-  private func assertReturnStatement(_ statement: any Statement) {
-    guard let statement = statement as? ReturnStatement else {
-      XCTFail("Expected ReturnStatement but got \(type(of: statement))")
-      return
-    }
-    
-    XCTAssertEqual(statement.token.literal, "return")
-  }
-  
-  private func assertIdentifierExpression(_ statement: any Statement, name: String) {
-    guard let statement = statement as? ExpressionStatement else {
-      XCTFail("Expected ExpressionStatement but got \(type(of: statement))")
-      return
-    }
-    guard let expression = statement.expression as? IdentifierExpression else {
-      XCTFail("Expected IdentifierExpression but got \(type(of: statement.expression))")
-      return
-    }
-    
-    XCTAssertEqual(expression.value, name)
-    XCTAssertEqual(expression.token.literal, name)
-  }
-  
-  private func assertIntegerExpression(_ statement: any Statement, value: Int) {
-    guard let statement = statement as? ExpressionStatement else {
-      XCTFail("Expected ExpressionStatement but got \(type(of: statement))")
-      return
-    }
-    guard let expression = statement.expression as? IntegerExpression else {
-      XCTFail("Expected IntegerExpression but got \(type(of: statement.expression))")
-      return
-    }
-    
-    XCTAssertEqual(expression.value, value)
-    XCTAssertEqual(expression.token.literal, "\(value)")
+    expect(program.statements).to(haveCount(1))
+    expect(program.statements[0]).to(beIntegerExpressionWithValue(5))
   }
 }
