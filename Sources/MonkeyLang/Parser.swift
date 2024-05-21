@@ -129,21 +129,19 @@ private let precedences: [Token: OperatorPrecedence] = [
 
 extension Parser {
   private func setupExpressionParsers() {
-    semanticCode.registerPrefix({ [unowned self] in self.parseIdentifier() }, forToken: .ident)
-    semanticCode.registerPrefix({ [unowned self] in try self.parseInteger() }, forToken: .int)
-    semanticCode.registerPrefix({ [unowned self] in try self.parsePrefixExpression() }, forToken: .bang)
-    semanticCode.registerPrefix({ [unowned self] in try self.parsePrefixExpression() }, forToken: .minus)
-
-    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .plus)
-    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .minus)
-    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .slash)
-    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .asterisk)
-    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .eq)
-    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .notEq)
-    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .lt)
-    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .gt)
+    semanticCode[prefix: .ident] = { [unowned self] in self.parseIdentifier() }
+    semanticCode[prefix: .int] = { [unowned self] in try self.parseInteger() }
+    [.bang, .minus].forEach {
+      semanticCode[prefix: $0] = { [unowned self] in try self.parsePrefixExpression() }
+    }
+    [.true, .false].forEach {
+      semanticCode[prefix: $0] = { [unowned self] in try self.parseBooleanExpression() }
+    }
+    [.plus, .minus, .slash, .asterisk, .eq, .notEq, .lt, .gt].forEach {
+      semanticCode[infix: $0] = { [unowned self] in try self.parseInfixExpression(lhs: $0) }
+    }
   }
-  
+
   private func parseExpression(
     usingPrecedence precedence: OperatorPrecedence
   ) throws -> any Expression {
@@ -174,6 +172,13 @@ extension Parser {
       throw ParseError.typeError("Expect integer got \(curToken.literal)")
     }
     return IntegerExpression(token: curToken, value: value)
+  }
+  
+  private func parseBooleanExpression() throws -> BooleanExpression {
+    guard let value = Bool(curToken.literal) else {
+      throw ParseError.typeError("Expect boolean got \(curToken.literal)")
+    }
+    return BooleanExpression(token: curToken, value: value)
   }
   
   private func parsePrefixExpression() throws -> PrefixExpression {
@@ -213,21 +218,23 @@ struct SemanticCode {
   
   private var prefixParsers: [Token.CaseID: PrefixParser] = [:]
   private var infixParsers: [Token.CaseID: InfixParser] = [:]
-  
-  mutating func registerPrefix(_ parser: @escaping PrefixParser, forToken tokenID: Token.CaseID) {
-    prefixParsers[tokenID] = parser
-  }
-  
-  mutating func registerInfix(_ parser: @escaping InfixParser, forToken tokenID: Token.CaseID) {
-    infixParsers[tokenID] = parser
-  }
-  
+
   subscript(prefix tokenID: Token.CaseID) -> PrefixParser? {
-    prefixParsers[tokenID]
+    get {
+      prefixParsers[tokenID]
+    }
+    set(newValue) {
+      prefixParsers[tokenID] = newValue
+    }
   }
 
   subscript(infix tokenID: Token.CaseID) -> InfixParser? {
-    infixParsers[tokenID]
+    get {
+      infixParsers[tokenID]
+    }
+    set(newValue) {
+      infixParsers[tokenID] = newValue
+    }
   }
 }
 

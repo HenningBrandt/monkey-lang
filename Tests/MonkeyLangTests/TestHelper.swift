@@ -4,85 +4,64 @@ import Nimble
 
 // MARK: - Statement Matchers
 
-func beLetStatementWithName(_ name: String) -> Matcher<any Statement> {
-  Matcher { actualExpression in
-    if let actualValue = try actualExpression.evaluate() {
-      guard let statement = actualValue as? LetStatement else {
-        let message = ExpectationMessage
-          .expectedActualValueTo("be a let statement")
-        return MatcherResult(status: .fail, message: message)
+typealias StatementMatcher = Matcher<any MonkeyLang.Statement>
+
+extension StatementMatcher {
+  static func `let`(_ name: String) -> StatementMatcher {
+    Matcher { input in
+      guard let statement = try input.evaluate() as? LetStatement else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be a let statement")
+        )
       }
       guard statement.token.literal == "let" else {
         return MatcherResult(
           status: .fail,
-          message: ExpectationMessage
-            .expectedActualValueTo("have 'let' token")
+          message: .expectedActualValueTo("have 'let' token")
         )
       }
+  
       let result = statement.name.value == name && statement.name.token.literal == name
       return MatcherResult(
         bool: result,
-        message: ExpectationMessage
-          .expectedActualValueTo("be named \(name)")
-      )
-    } else {
-      return MatcherResult(
-        status: .fail,
-        message: ExpectationMessage
-          .expectedActualValueTo("be a let statement")
-          .appendedBeNilHint()
+        message: .expectedCustomValueTo("be named \(name)", actual: statement.name.value)
       )
     }
   }
-}
-
-func beReturnStatement() -> Matcher<any Statement> {
-  Matcher { actualExpression in
-    if let actualValue = try actualExpression.evaluate() {
-      guard let statement = actualValue as? ReturnStatement else {
-        let message = ExpectationMessage
-          .expectedActualValueTo("be a return statement")
-        return MatcherResult(status: .fail, message: message)
+  
+  static func `return`() -> StatementMatcher {
+    Matcher { input in
+      guard let statement = try input.evaluate() as? ReturnStatement else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be a return statement")
+        )
       }
+      
       let result = statement.token.literal == "return"
       return MatcherResult(
         bool: result,
-        message: ExpectationMessage
-          .expectedCustomValueTo("have 'return' token", actual: statement.token.literal)
-      )
-    } else {
-      return MatcherResult(
-        status: .fail,
-        message: ExpectationMessage
-          .expectedActualValueTo("be a return statement")
-          .appendedBeNilHint()
+        message: .expectedCustomValueTo("have 'return' token", actual: statement.token.literal)
       )
     }
   }
-}
-
-func beExpressionStatement(
-  containing expressionMatcher: Matcher<any MonkeyLang.Expression>
-) -> Matcher<any Statement> {
-  Matcher { actualExpression in
-    if let actualValue = try actualExpression.evaluate() {
-      guard let statement = actualValue as? ExpressionStatement else {
-        let message = ExpectationMessage
-          .expectedActualValueTo("be an expression statement")
-        return MatcherResult(status: .fail, message: message)
-      }
-      return try expressionMatcher.satisfies(
-        Nimble.Expression(
-          expression: { statement.expression },
-          location: actualExpression.location
+  
+  static func expression(_ matcher: ExpressionMatcher) -> StatementMatcher {
+    Matcher { input in
+      guard let statement = try input.evaluate() as? ExpressionStatement else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be an expression statement")
         )
-      )
-    } else {
-      return MatcherResult(
-        status: .fail,
-        message: ExpectationMessage
-          .expectedActualValueTo("be an expression statement")
-          .appendedBeNilHint()
+        
+      }
+      
+      return try matcher.satisfies(
+        Expression(
+          expression: { statement.expression },
+          location: input.location
+        )
       )
     }
   }
@@ -90,125 +69,138 @@ func beExpressionStatement(
 
 // MARK: - Expression Matchers
 
-func identifierExpression(withName name: String) -> Matcher<any MonkeyLang.Expression> {
-  Matcher { actualExpression in
-    if let actualValue = try actualExpression.evaluate() {
-      guard let expression = actualValue as? IdentifierExpression else {
-        let message = ExpectationMessage
-          .expectedActualValueTo("be an identifier expression")
-        return MatcherResult(status: .fail, message: message)
-      }
-      let result = expression.value == name && expression.token.literal == name
-      return MatcherResult(
-        bool: result,
-        message: ExpectationMessage
-          .expectedActualValueTo("be named \(name)")
-      )
-    } else {
-      return MatcherResult(
-        status: .fail,
-        message: ExpectationMessage
-          .expectedActualValueTo("be an identifier expression")
-          .appendedBeNilHint()
-      )
-    }
-  }
-}
+typealias ExpressionMatcher = Matcher<any MonkeyLang.Expression>
 
-func integerExpression(withValue value: Int) -> Matcher<any MonkeyLang.Expression> {
-  Matcher { actualExpression in
-    if let actualValue = try actualExpression.evaluate() {
-      guard let expression = actualValue as? IntegerExpression else {
-        let message = ExpectationMessage
-          .expectedActualValueTo("be an integer expression")
-        return MatcherResult(status: .fail, message: message)
-      }
-      let result = expression.value == value && expression.token.literal == "\(value)"
-      return MatcherResult(
-        bool: result,
-        message: ExpectationMessage
-          .expectedActualValueTo("have value \(value)")
-      )
-    } else {
-      return MatcherResult(
-        status: .fail,
-        message: ExpectationMessage
-          .expectedActualValueTo("be an integer expression")
-          .appendedBeNilHint()
-      )
-    }
-  }
-}
-
-func prefixExpression(
-  withOperator op: String,
-  rhs subExpressionMatcher: Matcher<any MonkeyLang.Expression>
-) -> Matcher<any MonkeyLang.Expression> {
-  Matcher { actualExpression in
-    if let actualValue = try actualExpression.evaluate() {
-      guard let expression = actualValue as? PrefixExpression else {
-        let message = ExpectationMessage
-          .expectedActualValueTo("be a prefix expression")
-        return MatcherResult(status: .fail, message: message)
-      }
-      guard expression.op == op && expression.token.literal == "\(op)" else {
+extension ExpressionMatcher {
+  static func prefix(
+    _ op: String,
+    _ rhs: ExpressionMatcher
+  ) -> ExpressionMatcher {
+    Matcher { input in
+      guard let exp = try input.evaluate() as? PrefixExpression else {
         return MatcherResult(
           status: .fail,
-          message: ExpectationMessage
-            .expectedActualValueTo("have \(op) operator")
-        )
-      }
-      return try subExpressionMatcher.satisfies(
-        Expression(expression: { expression.right }, location: actualExpression.location)
-      )
-    } else {
-      return MatcherResult(
-        status: .fail,
-        message: ExpectationMessage
-          .expectedActualValueTo("be a prefix expression")
-          .appendedBeNilHint()
-      )
-    }
-  }
-}
-
-func infixExpression(
-  withOperator op: String,
-  lhs lhsMatcher: Matcher<any MonkeyLang.Expression>,
-  rhs rhsMatcher: Matcher<any MonkeyLang.Expression>
-) -> Matcher<any MonkeyLang.Expression> {
-  Matcher { actualExpression in
-    if let actualValue = try actualExpression.evaluate() {
-      guard let expression = actualValue as? InfixExpression else {
-        let message = ExpectationMessage
-          .expectedActualValueTo("be an infix expression")
-        return MatcherResult(status: .fail, message: message)
-      }
-      guard expression.op == op && expression.token.literal == "\(op)" else {
-        return MatcherResult(
-          status: .fail,
-          message: ExpectationMessage
-            .expectedActualValueTo("have \(op) operator")
+          message: .expectedActualValueTo("be a prefix expression")
         )
       }
       
-      let lhsRes = try lhsMatcher.satisfies(
-        Expression(expression: { expression.left }, location: actualExpression.location)
-      )
-      if lhsRes.status == .matches {
-        return lhsRes
+      guard exp.op == op else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedCustomValueTo("have \(op) operator", actual: exp.op)
+        )
       }
 
-      return try rhsMatcher.satisfies(
-        Expression(expression: { expression.right }, location: actualExpression.location)
+      return try rhs.satisfies(
+        Expression(expression: { exp.right }, location: input.location)
       )
-    } else {
+    }
+  }
+
+  static func infix(
+    _ lhs: ExpressionMatcher,
+    _ op: String,
+    _ rhs: ExpressionMatcher
+  ) -> ExpressionMatcher {
+    Matcher { input in
+      guard let exp = try input.evaluate() as? InfixExpression else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be an infix expression")
+        )
+      }
+      
+      guard exp.op == op else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedCustomValueTo("have \(op) operator", actual: exp.op)
+        )
+      }
+      
+      let res = try lhs.satisfies(
+        Expression(expression: { exp.left }, location: input.location)
+      )
+      guard res.status == .matches else {
+        return res
+      }
+      
+      return try rhs.satisfies(
+        Expression(expression: { exp.right }, location: input.location)
+      )
+    }
+  }
+  
+  static func ident(_ name: String) -> ExpressionMatcher {
+    Matcher { input in
+      guard let exp = try input.evaluate() as? IdentifierExpression else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be an identifier expression")
+        )
+      }
+      
       return MatcherResult(
-        status: .fail,
-        message: ExpectationMessage
-          .expectedActualValueTo("be an prefix expression")
-          .appendedBeNilHint()
+        bool: exp.value == name,
+        message: .expectedCustomValueTo("be named \(name)", actual: exp.value)
       )
+    }
+  }
+  
+  static func int(_ value: Int) -> ExpressionMatcher {
+    Matcher { input in
+      guard let exp = try input.evaluate() as? IntegerExpression else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be an integer expression")
+        )
+      }
+      
+      return MatcherResult(
+        bool: exp.value == value,
+        message: .expectedCustomValueTo("have value \(value)", actual: "\(exp.value)")
+      )
+    }
+  }
+  
+  static func bool(_ value: Bool) -> ExpressionMatcher {
+    Matcher { input in
+      guard let exp = try input.evaluate() as? BooleanExpression else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be a boolean expression")
+        )
+      }
+      
+      return MatcherResult(
+        bool: exp.value == value,
+        message: .expectedCustomValueTo("have value \(value)", actual: "\(exp.value)")
+      )
+    }
+  }
+}
+
+extension ExpressionMatcher: ExpressibleByIntegerLiteral {
+  public init(integerLiteral value: IntegerLiteralType) {
+    self.init { input in
+      return try ExpressionMatcher.int(value).satisfies(input)
+    }
+  }
+}
+
+extension ExpressionMatcher: ExpressibleByBooleanLiteral {
+  public init(booleanLiteral value: BooleanLiteralType) {
+    self.init { input in
+      return try ExpressionMatcher.bool(value).satisfies(input)
+    }
+  }
+}
+
+extension ExpressionMatcher: ExpressibleByUnicodeScalarLiteral {}
+extension ExpressionMatcher: ExpressibleByExtendedGraphemeClusterLiteral {}
+extension ExpressionMatcher: ExpressibleByStringLiteral {
+  public init(stringLiteral value: StringLiteralType) {
+    self.init { input in
+      return try ExpressionMatcher.ident(value).satisfies(input)
     }
   }
 }

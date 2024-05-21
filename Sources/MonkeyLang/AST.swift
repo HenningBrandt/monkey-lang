@@ -90,6 +90,15 @@ struct IntegerExpression: Expression {
   }
 }
 
+struct BooleanExpression: Expression {
+  var token: Token
+  var value: Bool
+  
+  var description: String {
+    "\(value)"
+  }
+}
+
 struct PrefixExpression: Expression {
   var token: Token
   var op: String
