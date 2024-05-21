@@ -65,6 +65,35 @@ extension StatementMatcher {
       )
     }
   }
+  
+  static func block(_ matchers: [StatementMatcher]) -> StatementMatcher {
+    Matcher { input in
+      guard let statement = try input.evaluate() as? BlockStatement else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be a block statement")
+        )
+      }
+      
+      guard matchers.count == statement.statements.count else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedTo("receive a matcher for every statement")
+        )
+      }
+      
+      for (index, matcher) in matchers.enumerated() {
+        let res = try matcher.satisfies(
+          Expression(expression: { statement.statements[index] }, location: input.location)
+        )
+        if res.status != .matches {
+          return res
+        }
+      }
+      
+      return MatcherResult(bool: true, message: .expectedTo(""))
+    }
+  }
 }
 
 // MARK: - Expression Matchers
@@ -126,6 +155,50 @@ extension ExpressionMatcher {
       
       return try rhs.satisfies(
         Expression(expression: { exp.right }, location: input.location)
+      )
+    }
+  }
+  
+  static func `if`(
+    _ condition: ExpressionMatcher,
+    _ consequence: StatementMatcher,
+    _ alternative: StatementMatcher? = nil
+  ) -> ExpressionMatcher {
+    Matcher { input in
+      guard let exp = try input.evaluate() as? IfExpression else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be an if expression")
+        )
+      }
+      
+      let condRes = try condition.satisfies(
+        Expression(expression: { exp.condition }, location: input.location)
+      )
+      guard condRes.status == .matches else {
+        return condRes
+      }
+      
+      let consRes = try consequence.satisfies(
+        Expression(expression: { exp.consequence }, location: input.location)
+      )
+      guard consRes.status == .matches else {
+        return consRes
+      }
+      
+      guard let expAlternative = exp.alternative else {
+        return MatcherResult.init(bool: true, message: .expectedTo(""))
+      }
+      
+      guard let alternative else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedTo("receive alternative matcher")
+        )
+      }
+
+      return try alternative.satisfies(
+        Expression(expression: { expAlternative }, location: input.location)
       )
     }
   }

@@ -2,11 +2,15 @@ import Foundation
 
 // MARK: - AST Entrypoint
 
-struct Program: CustomStringConvertible {
+struct Program: CustomStringConvertible, Equatable {
   var statements: [any Statement]
   
   var description: String {
     statements.map(\.description).joined(separator: "\n")
+  }
+  
+  static func == (lhs: Program, rhs: Program) -> Bool {
+    isEqual(lhs: lhs.statements, rhs: rhs.statements)
   }
 }
 
@@ -47,6 +51,20 @@ struct ReturnStatement: Statement {
   static func == (lhs: ReturnStatement, rhs: ReturnStatement) -> Bool {
     lhs.token == rhs.token &&
     isEqual(lhs: lhs.returnValue, rhs: rhs.returnValue)
+  }
+}
+
+struct BlockStatement: Statement {
+  var token: Token
+  var statements: [any Statement]
+  
+  var description: String {
+    statements.map(\.description).joined()
+  }
+  
+  static func == (lhs: BlockStatement, rhs: BlockStatement) -> Bool {
+    lhs.token == rhs.token &&
+    isEqual(lhs: lhs.statements, rhs: rhs.statements)
   }
 }
 
@@ -133,9 +151,72 @@ struct InfixExpression: Expression {
   }
 }
 
+struct IfExpression: Expression {
+  var token: Token
+  var condition: any Expression
+  var consequence: BlockStatement
+  var alternative: BlockStatement?
+  
+  var description: String {
+    var desc = "if \(condition) \(consequence)"
+    if let alternative {
+      desc += " else \(alternative)"
+    }
+    return desc
+  }
+  
+  static func == (lhs: IfExpression, rhs: IfExpression) -> Bool {
+    lhs.token == rhs.token &&
+    isEqual(lhs: lhs.condition, rhs: rhs.condition) &&
+    isEqual(lhs: lhs.consequence, rhs: rhs.consequence) &&
+    isEqual(lhs: lhs.alternative, rhs: rhs.alternative)
+  }
+}
+
 // MARK: - Open Existentials
 
-private func isEqual<A: Expression>(lhs: A, rhs: any Expression) -> Bool {
-  guard let rhs = rhs as? A else { return false }
-  return lhs == rhs
+private func isEqual(lhs: any Expression, rhs: any Expression) -> Bool {
+  func _isEqual<A: Expression>(_ lhs: A, _ rhs: any Expression) -> Bool {
+    guard let rhs = rhs as? A else { return false }
+    return lhs == rhs
+  }
+  return _isEqual(lhs, rhs)
+}
+
+private func isEqual(lhs: (any Expression)?, rhs: (any Expression)?) -> Bool {
+  if lhs == nil && rhs == nil {
+    return true
+  }
+  guard let lhs, let rhs else {
+    return false
+  }
+  return isEqual(lhs: lhs, rhs: rhs)
+}
+
+private func isEqual(lhs: [any Expression], rhs: [any Expression]) -> Bool {
+  guard lhs.count == rhs.count else { return false }
+  return zip(lhs, rhs).allSatisfy { isEqual(lhs: $0, rhs: $1) }
+}
+
+private func isEqual(lhs: any Statement, rhs: any Statement) -> Bool {
+  func _isEqual<A: Statement>(_ lhs: A, _ rhs: any Statement) -> Bool {
+    guard let rhs = rhs as? A else { return false }
+    return lhs == rhs
+  }
+  return _isEqual(lhs, rhs)
+}
+
+private func isEqual(lhs: (any Statement)?, rhs: (any Statement)?) -> Bool {
+  if lhs == nil && rhs == nil {
+    return true
+  }
+  guard let lhs, let rhs else {
+    return false
+  }
+  return isEqual(lhs: lhs, rhs: rhs)
+}
+
+private func isEqual(lhs: [any Statement], rhs: [any Statement]) -> Bool {
+  guard lhs.count == rhs.count else { return false }
+  return zip(lhs, rhs).allSatisfy { isEqual(lhs: $0, rhs: $1) }
 }

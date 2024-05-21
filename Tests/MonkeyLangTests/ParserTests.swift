@@ -134,4 +134,31 @@ final class ParserTests: XCTestCase {
       expect(output.description).to(equal(expected))
     }
   }
+  
+  func testIfExpression() throws {
+    let statements = try Parser.parse("if (x < y) { x }").statements
+    expect(statements).to(haveCount(1))
+    expect(statements[0]).to(
+      .expression(
+        .if(
+          .infix("x", "<", "y"),
+          .block([.expression("x")])
+        )
+      )
+    )
+  }
+
+  func testIfElseExpression() throws {
+    let statements = try Parser.parse("if (x < y) { x } else { y }").statements
+    expect(statements).to(haveCount(1))
+    expect(statements[0]).to(
+      .expression(
+        .if(
+          .infix("x", "<", "y"),
+          .block([.expression("x")]),
+          .block([.expression("y")])
+        )
+      )
+    )
+  }
 }

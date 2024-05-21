@@ -132,6 +132,7 @@ extension Parser {
     semanticCode[prefix: .ident] = { [unowned self] in self.parseIdentifier() }
     semanticCode[prefix: .int] = { [unowned self] in try self.parseInteger() }
     semanticCode[prefix: .lparen] = { [unowned self] in try self.parseGroupExpression() }
+    semanticCode[prefix: .if] = { [unowned self] in try self.parseIfExpression() }
     [.bang, .minus].forEach {
       semanticCode[prefix: $0] = { [unowned self] in try self.parsePrefixExpression() }
     }
@@ -187,6 +188,43 @@ extension Parser {
       throw ParseError.typeError("Expect boolean got \(curToken.literal)")
     }
     return BooleanExpression(token: curToken, value: value)
+  }
+  
+  private func parseIfExpression() throws -> IfExpression {
+    let token = curToken
+    
+    try consumePeek(\.lparen)
+    nextToken()
+    let condition = try parseExpression(usingPrecedence: .lowest)
+    
+    try consumePeek(\.rparen)
+    try consumePeek(\.lbrace)
+    let consequence = try parseBlockStatement()
+    
+    var alternative: BlockStatement? = nil
+    if peekToken == .else {
+      nextToken()
+      try consumePeek(\.lbrace)
+      alternative = try parseBlockStatement()
+    }
+    
+    return IfExpression(
+      token: token,
+      condition: condition,
+      consequence: consequence,
+      alternative: alternative
+    )
+  }
+  
+  private func parseBlockStatement() throws -> BlockStatement {
+    let token = curToken
+    nextToken()
+    var statements: [any Statement] = []
+    while curToken != .rbrace && curToken != .eof {
+      try statements.append(parseStatement())
+      nextToken()
+    }
+    return BlockStatement(token: token, statements: statements)
   }
   
   private func parsePrefixExpression() throws -> PrefixExpression {
