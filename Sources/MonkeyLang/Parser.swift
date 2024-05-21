@@ -133,6 +133,7 @@ extension Parser {
     semanticCode[prefix: .int] = { [unowned self] in try self.parseInteger() }
     semanticCode[prefix: .lparen] = { [unowned self] in try self.parseGroupExpression() }
     semanticCode[prefix: .if] = { [unowned self] in try self.parseIfExpression() }
+    semanticCode[prefix: .function] = { [unowned self] in try self.parseFunctionLiteral() }
     [.bang, .minus].forEach {
       semanticCode[prefix: $0] = { [unowned self] in try self.parsePrefixExpression() }
     }
@@ -216,6 +217,18 @@ extension Parser {
     )
   }
   
+  private func parseFunctionLiteral() throws -> FunctionLiteral {
+    let token = curToken
+
+    try consumePeek(\.lparen)
+    let params = try parseFunctionParameters()
+
+    try consumePeek(\.lbrace)
+    let body = try parseBlockStatement()
+    
+    return FunctionLiteral(token: token, parameters: params, body: body)
+  }
+  
   private func parseBlockStatement() throws -> BlockStatement {
     let token = curToken
     nextToken()
@@ -225,6 +238,28 @@ extension Parser {
       nextToken()
     }
     return BlockStatement(token: token, statements: statements)
+  }
+  
+  private func parseFunctionParameters() throws -> [IdentifierExpression] {
+    var identifiers: [IdentifierExpression] = []
+    
+    if peekToken == .rparen {
+      nextToken()
+      return identifiers
+    }
+    
+    nextToken()
+    let identifier = IdentifierExpression(token: curToken, value: curToken.literal)
+    identifiers.append(identifier)
+    while peekToken == .comma {
+      nextToken()
+      nextToken()
+      let identifier = IdentifierExpression(token: curToken, value: curToken.literal)
+      identifiers.append(identifier)
+    }
+    try consumePeek(\.rparen)
+    
+    return identifiers
   }
   
   private func parsePrefixExpression() throws -> PrefixExpression {

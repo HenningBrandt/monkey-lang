@@ -203,6 +203,36 @@ extension ExpressionMatcher {
     }
   }
   
+  static func fn(
+    _ params: [String],
+    _ body: StatementMatcher
+  ) -> ExpressionMatcher {
+    Matcher { input in
+      guard let exp = try input.evaluate() as? FunctionLiteral else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be a function expression")
+        )
+      }
+      
+      let paramsRes =
+        params.count == exp.parameters.count &&
+        zip(params, exp.parameters).allSatisfy { name, identExpression in
+          identExpression == IdentifierExpression(token: .ident(name), value: name)
+        }
+      guard paramsRes else {
+        return MatcherResult(
+          bool: paramsRes,
+          message: .expectedCustomValueTo("match params list \(params)", actual: "\(exp.parameters)")
+        )
+      }
+
+      return try body.satisfies(
+        Expression(expression: { exp.body }, location: input.location)
+      )
+    }
+  }
+  
   static func ident(_ name: String) -> ExpressionMatcher {
     Matcher { input in
       guard let exp = try input.evaluate() as? IdentifierExpression else {

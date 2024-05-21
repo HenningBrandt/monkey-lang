@@ -158,9 +158,9 @@ struct IfExpression: Expression {
   var alternative: BlockStatement?
   
   var description: String {
-    var desc = "if \(condition) \(consequence)"
+    var desc = "\(token.literal) \(condition) \(consequence)"
     if let alternative {
-      desc += " else \(alternative)"
+      desc += " \(Token.else.literal) \(alternative)"
     }
     return desc
   }
@@ -170,6 +170,17 @@ struct IfExpression: Expression {
     isEqual(lhs: lhs.condition, rhs: rhs.condition) &&
     isEqual(lhs: lhs.consequence, rhs: rhs.consequence) &&
     isEqual(lhs: lhs.alternative, rhs: rhs.alternative)
+  }
+}
+
+struct FunctionLiteral: Expression {
+  var token: Token
+  var parameters: [IdentifierExpression]
+  var body: BlockStatement
+  
+  var description: String {
+    let paramDesc = parameters.map(\.description).joined(separator: ", ")
+    return "\(token.literal)(\(paramDesc)) \(body)"
   }
 }
 

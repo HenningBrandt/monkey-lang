@@ -161,4 +161,29 @@ final class ParserTests: XCTestCase {
       )
     )
   }
+  
+  func testFunctionLiteral() throws {
+    let statements = try Parser.parse("fn(x, y) { x + y; }").statements
+    expect(statements).to(haveCount(1))
+    expect(statements[0]).to(
+      .expression(
+        .fn(
+          ["x", "y"],
+          .block([.expression(.infix("x", "+", "y"))])
+        )
+      )
+    )
+  }
+  
+  func testFunctionParameters() throws {
+    try [
+      ("fn() {};", []),
+      ("fn(x) {};", ["x"]),
+      ("fn(x, y, z) {};", ["x", "y", "z"]),
+    ].forEach { (input: String, params: [String]) in
+      let statements = try Parser.parse(input).statements
+      expect(statements).to(haveCount(1))
+      expect(statements[0]).to(.expression(.fn(params, .block([]))))
+    }
+  }
 }
