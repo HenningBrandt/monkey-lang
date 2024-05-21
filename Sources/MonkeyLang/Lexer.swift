@@ -105,6 +105,7 @@ final class Lexer {
   
   private func readChar() {
     guard readPosition < input.endIndex else {
+      position = input.endIndex
       char = Character("\0")
       return
     }
