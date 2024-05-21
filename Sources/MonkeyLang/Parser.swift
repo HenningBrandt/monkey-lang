@@ -15,7 +15,11 @@ final class Parser {
     setupExpressionParsers()
   }
   
-  struct ParseError: Error {}
+  enum ParseError: Error {
+    case generic
+    case typeError(String)
+    case prefixParserNotFound(String)
+  }
   
   // TODO: Parser is throwing, so it fails on the first error. Don't throw and collect errors instead.
   func parseProgram() throws -> Program {
@@ -89,7 +93,7 @@ final class Parser {
   @discardableResult
   private func consumePeek<T>(_ tokenPath: CaseKeyPath<Token, T>) throws -> T {
     guard let res = peekToken[case: tokenPath] else {
-      throw ParseError()
+      throw ParseError.generic
     }
     nextToken()
     return res
@@ -98,7 +102,7 @@ final class Parser {
 
 // MARK: - Pratt Parser (Expressions)
 
-enum OperatorPrecedence: Int {
+enum OperatorPrecedence: Int, Comparable {
   case lowest = 1
   case equals // ==
   case lessGreater // > or <
@@ -106,23 +110,60 @@ enum OperatorPrecedence: Int {
   case product // *
   case prefix // -X or !X
   case call // myFunction(X)
+  
+  static func < (lhs: OperatorPrecedence, rhs: OperatorPrecedence) -> Bool {
+    lhs.rawValue < rhs.rawValue
+  }
 }
+
+private let precedences: [Token: OperatorPrecedence] = [
+  .eq: .equals,
+  .notEq: .equals,
+  .lt: .lessGreater,
+  .gt: .lessGreater,
+  .plus: .sum,
+  .minus: .sum,
+  .slash: .product,
+  .asterisk: .product,
+]
 
 extension Parser {
   private func setupExpressionParsers() {
     semanticCode.registerPrefix({ [unowned self] in self.parseIdentifier() }, forToken: .ident)
     semanticCode.registerPrefix({ [unowned self] in try self.parseInteger() }, forToken: .int)
-  }
+    semanticCode.registerPrefix({ [unowned self] in try self.parsePrefixExpression() }, forToken: .bang)
+    semanticCode.registerPrefix({ [unowned self] in try self.parsePrefixExpression() }, forToken: .minus)
 
+    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .plus)
+    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .minus)
+    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .slash)
+    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .asterisk)
+    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .eq)
+    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .notEq)
+    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .lt)
+    semanticCode.registerInfix({ [unowned self] in try self.parseInfixExpression(lhs: $0) }, forToken: .gt)
+  }
+  
   private func parseExpression(
     usingPrecedence precedence: OperatorPrecedence
   ) throws -> any Expression {
     guard let prefixParser = semanticCode[prefix: curToken.caseID] else {
-      throw ParseError()
+      throw ParseError.prefixParserNotFound("no prefix parse function for \(curToken.literal)")
     }
-    return try prefixParser()
+
+    var expression = try prefixParser()
+    
+    while peekToken != .semicolon && precedence < peekPrecedence {
+      guard let infixParser = semanticCode[infix: peekToken.caseID] else {
+        return expression
+      }
+      nextToken()
+      expression = try infixParser(expression)
+    }
+    
+    return expression
   }
-  
+
   private func parseIdentifier() -> IdentifierExpression {
     IdentifierExpression(token: curToken, value: curToken.literal)
   }
@@ -130,9 +171,39 @@ extension Parser {
   private func parseInteger() throws -> IntegerExpression {
     // TODO: Just use value from token
     guard let value = Int(curToken.literal) else {
-      throw ParseError()
+      throw ParseError.typeError("Expect integer got \(curToken.literal)")
     }
     return IntegerExpression(token: curToken, value: value)
+  }
+  
+  private func parsePrefixExpression() throws -> PrefixExpression {
+    let token = curToken
+    nextToken()
+    return try PrefixExpression(
+      token: token,
+      op: token.literal,
+      right: parseExpression(usingPrecedence: .prefix)
+    )
+  }
+  
+  private func parseInfixExpression(lhs: any Expression) throws -> InfixExpression {
+    let precedence = curPrecedence
+    let token = curToken
+    nextToken()
+    return try InfixExpression(
+      token: token,
+      op: token.literal,
+      left: lhs,
+      right: parseExpression(usingPrecedence: precedence)
+    )
+  }
+
+  private var peekPrecedence: OperatorPrecedence {
+    precedences[peekToken] ?? .lowest
+  }
+
+  private var curPrecedence: OperatorPrecedence {
+    precedences[curToken] ?? .lowest
   }
 }
 

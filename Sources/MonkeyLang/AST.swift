@@ -90,6 +90,40 @@ struct IntegerExpression: Expression {
   }
 }
 
+struct PrefixExpression: Expression {
+  var token: Token
+  var op: String
+  var right: any Expression
+  
+  var description: String {
+    "(\(op)\(right))"
+  }
+  
+  static func == (lhs: PrefixExpression, rhs: PrefixExpression) -> Bool {
+    lhs.token == rhs.token &&
+    lhs.op == rhs.op &&
+    isEqual(lhs: lhs.right, rhs: rhs.right)
+  }
+}
+
+struct InfixExpression: Expression {
+  var token: Token
+  var op: String
+  var left: any Expression
+  var right: any Expression
+  
+  var description: String {
+    "(\(left) \(op) \(right))"
+  }
+  
+  static func == (lhs: InfixExpression, rhs: InfixExpression) -> Bool {
+    lhs.token == rhs.token &&
+    lhs.op == rhs.op &&
+    isEqual(lhs: lhs.left, rhs: rhs.left) &&
+    isEqual(lhs: lhs.right, rhs: rhs.right)
+  }
+}
+
 // MARK: - Open Existentials
 
 private func isEqual<A: Expression>(lhs: A, rhs: any Expression) -> Bool {

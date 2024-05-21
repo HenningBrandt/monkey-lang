@@ -4,7 +4,7 @@ import IdentifiedEnumCases
 
 @CasePathable
 @IdentifiedEnumCases
-enum Token: Equatable {
+enum Token: Hashable {
   case illegal(String)
   case eof
   
