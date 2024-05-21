@@ -131,6 +131,7 @@ extension Parser {
   private func setupExpressionParsers() {
     semanticCode[prefix: .ident] = { [unowned self] in self.parseIdentifier() }
     semanticCode[prefix: .int] = { [unowned self] in try self.parseInteger() }
+    semanticCode[prefix: .lparen] = { [unowned self] in try self.parseGroupExpression() }
     [.bang, .minus].forEach {
       semanticCode[prefix: $0] = { [unowned self] in try self.parsePrefixExpression() }
     }
@@ -159,6 +160,13 @@ extension Parser {
       expression = try infixParser(expression)
     }
     
+    return expression
+  }
+  
+  private func parseGroupExpression() throws -> any Expression {
+    nextToken()
+    let expression = try parseExpression(usingPrecedence: .lowest)
+    try consumePeek(\.rparen)
     return expression
   }
 
