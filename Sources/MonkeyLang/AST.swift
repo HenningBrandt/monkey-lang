@@ -184,6 +184,23 @@ struct FunctionLiteral: Expression {
   }
 }
 
+struct CallExpression: Expression {
+  var token: Token
+  var function: any Expression
+  var arguments: [any Expression]
+  
+  var description: String {
+    let argsDesc = arguments.map(\.description).joined(separator: ", ")
+    return "\(function)(\(argsDesc))"
+  }
+  
+  static func == (lhs: CallExpression, rhs: CallExpression) -> Bool {
+    lhs.token == rhs.token &&
+    isEqual(lhs: lhs.function, rhs: rhs.function) &&
+    isEqual(lhs: lhs.arguments, rhs: rhs.arguments)
+  }
+}
+
 // MARK: - Open Existentials
 
 private func isEqual(lhs: any Expression, rhs: any Expression) -> Bool {

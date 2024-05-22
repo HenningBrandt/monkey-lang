@@ -125,6 +125,7 @@ private let precedences: [Token: OperatorPrecedence] = [
   .minus: .sum,
   .slash: .product,
   .asterisk: .product,
+  .lparen: .call,
 ]
 
 extension Parser {
@@ -140,6 +141,8 @@ extension Parser {
     [.true, .false].forEach {
       semanticCode[prefix: $0] = { [unowned self] in try self.parseBooleanExpression() }
     }
+    
+    semanticCode[infix: .lparen] = { [unowned self] in try self.parseCallExpression(function: $0) }
     [.plus, .minus, .slash, .asterisk, .eq, .notEq, .lt, .gt].forEach {
       semanticCode[infix: $0] = { [unowned self] in try self.parseInfixExpression(lhs: $0) }
     }
@@ -229,14 +232,42 @@ extension Parser {
     return FunctionLiteral(token: token, parameters: params, body: body)
   }
   
+  private func parseCallExpression(function: any Expression) throws -> CallExpression {
+    let token = curToken
+    let arguments = try parseCallArguments()
+    return CallExpression(token: token, function: function, arguments: arguments)
+  }
+  
+  private func parseCallArguments() throws -> [any Expression] {
+    var args: [any Expression] = []
+    
+    if peekToken == .rparen {
+      nextToken()
+      return args
+    }
+    
+    nextToken()
+    try args.append(parseExpression(usingPrecedence: .lowest))
+    while peekToken == .comma {
+      nextToken()
+      nextToken()
+      try args.append(parseExpression(usingPrecedence: .lowest))
+    }
+    try consumePeek(\.rparen)
+    
+    return args
+  }
+  
   private func parseBlockStatement() throws -> BlockStatement {
     let token = curToken
+
     nextToken()
     var statements: [any Statement] = []
     while curToken != .rbrace && curToken != .eof {
       try statements.append(parseStatement())
       nextToken()
     }
+
     return BlockStatement(token: token, statements: statements)
   }
   
@@ -249,13 +280,11 @@ extension Parser {
     }
     
     nextToken()
-    let identifier = IdentifierExpression(token: curToken, value: curToken.literal)
-    identifiers.append(identifier)
+    identifiers.append(IdentifierExpression(token: curToken, value: curToken.literal))
     while peekToken == .comma {
       nextToken()
       nextToken()
-      let identifier = IdentifierExpression(token: curToken, value: curToken.literal)
-      identifiers.append(identifier)
+      identifiers.append(IdentifierExpression(token: curToken, value: curToken.literal))
     }
     try consumePeek(\.rparen)
     

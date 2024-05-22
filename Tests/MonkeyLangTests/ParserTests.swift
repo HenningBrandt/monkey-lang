@@ -129,6 +129,9 @@ final class ParserTests: XCTestCase {
       ("2 / (5 + 5)", "(2 / (5 + 5))"),
       ("-(5 + 5)", "(-(5 + 5))"),
       ("!(true == true)", "(!(true == true))"),
+      ("a + add(b * c) + d", "((a + add((b * c))) + d)"),
+      ("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
+      ("add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))")
     ].forEach { (input, expected) in
       let output = try Parser.parse(input)
       expect(output.description).to(equal(expected))
@@ -185,5 +188,18 @@ final class ParserTests: XCTestCase {
       expect(statements).to(haveCount(1))
       expect(statements[0]).to(.expression(.fn(params, .block([]))))
     }
+  }
+  
+  func testCallExpressions() throws {
+    let statements = try Parser.parse("add(1, 2 * 3, 4 + 5);").statements
+    expect(statements).to(haveCount(1))
+    expect(statements[0]).to(
+      .expression(
+        .call(
+          .ident("add"),
+          [1, .infix("2", "*", "3"), .infix("4", "+", "5")]
+        )
+      )
+    )
   }
 }

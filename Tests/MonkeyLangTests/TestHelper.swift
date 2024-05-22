@@ -233,6 +233,45 @@ extension ExpressionMatcher {
     }
   }
   
+  static func call(
+    _ function: ExpressionMatcher,
+    _ args: [ExpressionMatcher]
+  ) -> ExpressionMatcher {
+    Matcher { input in
+      guard let exp = try input.evaluate() as? CallExpression else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedActualValueTo("be a call expression")
+        )
+      }
+      
+      let fnRes = try function.satisfies(
+        Expression(expression: { exp.function }, location: input.location)
+      )
+      guard fnRes.status == .matches else {
+        return fnRes
+      }
+      
+      guard args.count == exp.arguments.count else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedTo("match argument list")
+        )
+      }
+      
+      for (matcher, argExpression) in zip(args, exp.arguments) {
+        let argRes = try matcher.satisfies(
+          Expression(expression: { argExpression }, location: input.location)
+        )
+        guard argRes.status == .matches else {
+          return fnRes
+        }
+      }
+      
+      return MatcherResult(bool: true, message: .expectedTo(""))
+    }
+  }
+
   static func ident(_ name: String) -> ExpressionMatcher {
     Matcher { input in
       guard let exp = try input.evaluate() as? IdentifierExpression else {
