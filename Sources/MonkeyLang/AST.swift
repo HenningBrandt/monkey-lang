@@ -6,7 +6,7 @@ struct Program: CustomStringConvertible, Equatable {
   var statements: [any Statement]
   
   var description: String {
-    statements.map(\.description).joined(separator: "\n")
+    statements.map(\.description).joined(separator: ";\n")
   }
   
   static func == (lhs: Program, rhs: Program) -> Bool {
@@ -59,9 +59,9 @@ struct BlockStatement: Statement {
   var statements: [any Statement]
   
   var description: String {
-    statements.map(\.description).joined()
+    "{ \(statements.map(\.description).joined(separator: "; ")) }"
   }
-  
+
   static func == (lhs: BlockStatement, rhs: BlockStatement) -> Bool {
     lhs.token == rhs.token &&
     isEqual(lhs: lhs.statements, rhs: rhs.statements)

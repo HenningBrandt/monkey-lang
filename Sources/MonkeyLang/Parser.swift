@@ -15,12 +15,23 @@ final class Parser {
     setupExpressionParsers()
   }
   
-  enum ParseError: Error {
-    case generic
-    case typeError(String)
-    case prefixParserNotFound(String)
+  enum ParseError: Error, CustomStringConvertible {
+    case wrongToken(received: String, expected: String)
+    case typeError(value: String, expectedType: String)
+    case prefixParserNotFound(token: String)
+    
+    var description: String {
+      switch self {
+      case .wrongToken(let received, let expected):
+        "expected next token to be \(expected), got \(received) instead"
+      case .typeError(let value, let expectedType):
+        "cannot convert \(value) to \(expectedType)"
+      case .prefixParserNotFound(let token):
+        "failed to parse \(token)"
+      }
+    }
   }
-  
+
   // TODO: Parser is throwing, so it fails on the first error. Don't throw and collect errors instead.
   func parseProgram() throws -> Program {
     var statements: [any Statement] = []
@@ -97,7 +108,10 @@ final class Parser {
   @discardableResult
   private func consumePeek<T>(_ tokenPath: CaseKeyPath<Token, T>) throws -> T {
     guard let res = peekToken[case: tokenPath] else {
-      throw ParseError.generic
+      if let tokenPath = tokenPath as? CaseKeyPath<Token, ()> {
+        throw ParseError.wrongToken(received: peekToken.literal, expected: tokenPath().literal)
+      }
+      throw ParseError.wrongToken(received: peekToken.literal, expected: "N/A")
     }
     nextToken()
     return res
@@ -156,7 +170,7 @@ extension Parser {
     usingPrecedence precedence: OperatorPrecedence
   ) throws -> any Expression {
     guard let prefixParser = semanticCode[prefix: curToken.caseID] else {
-      throw ParseError.prefixParserNotFound("no prefix parse function for \(curToken.literal)")
+      throw ParseError.prefixParserNotFound(token: curToken.literal)
     }
 
     var expression = try prefixParser()
@@ -186,14 +200,14 @@ extension Parser {
   private func parseInteger() throws -> IntegerExpression {
     // TODO: Just use value from token
     guard let value = Int(curToken.literal) else {
-      throw ParseError.typeError("Expect integer got \(curToken.literal)")
+      throw ParseError.typeError(value: curToken.literal, expectedType: "INT")
     }
     return IntegerExpression(token: curToken, value: value)
   }
   
   private func parseBooleanExpression() throws -> BooleanExpression {
     guard let value = Bool(curToken.literal) else {
-      throw ParseError.typeError("Expect boolean got \(curToken.literal)")
+      throw ParseError.typeError(value: curToken.literal, expectedType: "BOOL")
     }
     return BooleanExpression(token: curToken, value: value)
   }
