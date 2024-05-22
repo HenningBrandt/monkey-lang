@@ -1,19 +1,5 @@
 import Foundation
 
-// MARK: - AST Entrypoint
-
-struct Program: CustomStringConvertible, Equatable {
-  var statements: [any Statement]
-  
-  var description: String {
-    statements.map(\.description).joined(separator: ";\n")
-  }
-  
-  static func == (lhs: Program, rhs: Program) -> Bool {
-    isEqual(lhs: lhs.statements, rhs: rhs.statements)
-  }
-}
-
 // MARK: - AST Interface
 
 protocol Node: Equatable, CustomStringConvertible {
@@ -23,6 +9,25 @@ protocol Statement: Node { }
 protocol Expression: Node { }
 
 // MARK: - AST Nodes
+
+struct Program: Node {
+  var statements: [any Statement]
+  
+  var token: Token {
+    guard let statement = statements.first else {
+      return .eof
+    }
+    return statement.token
+  }
+
+  var description: String {
+    statements.map(\.description).joined(separator: ";\n")
+  }
+  
+  static func == (lhs: Program, rhs: Program) -> Bool {
+    isEqual(lhs: lhs.statements, rhs: rhs.statements)
+  }
+}
 
 struct LetStatement: Statement {
   var token: Token

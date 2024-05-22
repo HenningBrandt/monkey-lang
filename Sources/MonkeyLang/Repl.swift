@@ -22,8 +22,8 @@ public final class Repl {
     print(Self.prompt, terminator: "")
     while let line = readLine(strippingNewline: true) {
       do {
-        let program = try Parser.parse(line)
-        print(program.description)
+        let res = try Interpreter.interpret(line)
+        print(res)
       } catch {
         printError(error)
       }
