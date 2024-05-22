@@ -53,23 +53,27 @@ final class Parser {
     let name = IdentifierExpression(token: curToken, value: identName)
     try consumePeek(\.assign)
     
-    // TODO: Implement expression parsing. Skip to semicolon for now.
-    while curToken != .semicolon {
-      nextToken()
+    nextToken()
+    let value = try parseExpression(usingPrecedence: .lowest)
+
+    if peekToken == .semicolon {
+       nextToken()
     }
     
-    return LetStatement(token: token, name: name, value: EmptyExpression(token: token))
+    return LetStatement(token: token, name: name, value: value)
   }
   
   private func parseReturnStatement() throws -> ReturnStatement {
     let token = curToken
-
-    // TODO: Implement expression parsing. Skip to semicolon for now.
-    while curToken != .semicolon {
+    
+    nextToken()
+    let returnValue = try parseExpression(usingPrecedence: .lowest)
+    
+    if peekToken == .semicolon {
       nextToken()
     }
-    
-    return ReturnStatement(token: token, returnValue: EmptyExpression(token: token))
+
+    return ReturnStatement(token: token, returnValue: returnValue)
   }
   
   private func parseExpressionStatement() throws -> ExpressionStatement {

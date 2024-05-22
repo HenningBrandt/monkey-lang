@@ -5,9 +5,9 @@ import Nimble
 final class ParserTests: XCTestCase {
   func testLetStatements() throws {
     try [
-      ("let x = 5;", .let("x")),
-      ("let y = 10;", .let("y")),
-      ("let foobar = 838383;", .let("foobar")),
+      ("let x = 5;", .let("x", 5)),
+      ("let y = true;", .let("y", true)),
+      ("let foobar = y;", .let("foobar", "y")),
     ].forEach { (input: String, matcher: StatementMatcher) in
       let statements = try Parser.parse(input).statements
       expect(statements).to(haveCount(1))
@@ -30,9 +30,9 @@ final class ParserTests: XCTestCase {
   
   func testReturnStatements() throws {
     try [
-      ("return 5;", .return()),
-      ("return 10;", .return()),
-      ("return 838383;", .return()),
+      ("return 5;", .return(5)),
+      ("return false;", .return(false)),
+      ("return x;", .return("x")),
     ].forEach { (input: String, matcher: StatementMatcher) in
       let statements = try Parser.parse(input).statements
       expect(statements).to(haveCount(1))

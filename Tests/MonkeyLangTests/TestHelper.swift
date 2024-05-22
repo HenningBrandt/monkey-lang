@@ -7,7 +7,7 @@ import Nimble
 typealias StatementMatcher = Matcher<any MonkeyLang.Statement>
 
 extension StatementMatcher {
-  static func `let`(_ name: String) -> StatementMatcher {
+  static func `let`(_ name: String, _ valueMatcher: ExpressionMatcher) -> StatementMatcher {
     Matcher { input in
       guard let statement = try input.evaluate() as? LetStatement else {
         return MatcherResult(
@@ -22,15 +22,20 @@ extension StatementMatcher {
         )
       }
   
-      let result = statement.name.value == name && statement.name.token.literal == name
-      return MatcherResult(
-        bool: result,
-        message: .expectedCustomValueTo("be named \(name)", actual: statement.name.value)
+      guard statement.name.value == name else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedCustomValueTo("be named \(name)", actual: statement.name.value)
+        )
+      }
+      
+      return try valueMatcher.satisfies(
+        Expression(expression: { statement.value }, location: input.location)
       )
     }
   }
   
-  static func `return`() -> StatementMatcher {
+  static func `return`(_ valueMatcher: ExpressionMatcher) -> StatementMatcher {
     Matcher { input in
       guard let statement = try input.evaluate() as? ReturnStatement else {
         return MatcherResult(
@@ -39,10 +44,15 @@ extension StatementMatcher {
         )
       }
       
-      let result = statement.token.literal == "return"
-      return MatcherResult(
-        bool: result,
-        message: .expectedCustomValueTo("have 'return' token", actual: statement.token.literal)
+      guard statement.token.literal == "return" else {
+        return MatcherResult(
+          status: .fail,
+          message: .expectedCustomValueTo("have 'return' token", actual: statement.token.literal)
+        )
+      }
+      
+      return try valueMatcher.satisfies(
+        Expression(expression: { statement.returnValue }, location: input.location)
       )
     }
   }
