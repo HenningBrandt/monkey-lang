@@ -17,7 +17,6 @@ enum Object: Equatable, CustomStringConvertible {
   }
 }
 
-// TODO: Might be better off as a class?
 struct Evaluator {
   func eval(node: any Node) -> Object {
     switch node {
@@ -30,8 +29,12 @@ struct Evaluator {
     case let exp as BooleanExpression:
       return .bool(exp.value)
     case let exp as PrefixExpression:
-      let right = eval(node: exp.right)
-      return evalPrefixExpression(op: exp.op, rhs: right)
+      let rhs = eval(node: exp.right)
+      return evalPrefixExpression(op: exp.op, rhs: rhs)
+    case let exp as InfixExpression:
+      let lhs = eval(node: exp.left)
+      let rhs = eval(node: exp.right)
+      return evalInfixExpression(op: exp.op, lhs: lhs, rhs: rhs)
     default:
       return .null
     }
@@ -72,5 +75,49 @@ struct Evaluator {
       return .null
     }
     return .int(-n)
+  }
+  
+  private func evalInfixExpression(op: String, lhs: Object, rhs: Object) -> Object {
+    if case let .int(lVal) = lhs, case let .int(rVal) = rhs {
+      return evalIntegerInfixExpression(op: op, lhs: lVal, rhs: rVal)
+    }
+    if case let .bool(lVal) = lhs, case let .bool(rVal) = rhs {
+      return evalBooleanInfixExpression(op: op, lhs: lVal, rhs: rVal)
+    }
+    return .null
+  }
+  
+  private func evalIntegerInfixExpression(op: String, lhs: Int, rhs: Int) -> Object {
+    switch op {
+    case "+":
+      .int(lhs + rhs)
+    case "-":
+      .int(lhs - rhs)
+    case "*":
+      .int(lhs * rhs)
+    case "/":
+      .int(lhs / rhs)
+    case "<":
+      .bool(lhs < rhs)
+    case ">":
+      .bool(lhs > rhs)
+    case "==":
+      .bool(lhs == rhs)
+    case "!=":
+      .bool(lhs != rhs)
+    default:
+      .null
+    }
+  }
+  
+  private func evalBooleanInfixExpression(op: String, lhs: Bool, rhs: Bool) -> Object {
+    switch op {
+    case "==":
+      .bool(lhs == rhs)
+    case "!=":
+      .bool(lhs != rhs)
+    default:
+      .null
+    }
   }
 }
