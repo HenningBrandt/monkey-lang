@@ -65,6 +65,26 @@ final class EvaluatorTests: XCTestCase {
       ("if (1 < 2) { 10 } else { 20 }", .int(10)),
     ])
   }
+  
+  func testReturnStatement() throws {
+    try runTestCases([
+      ("return 10;", .int(10)),
+      ("return 10; 9;", .int(10)),
+      ("return 2 * 5; 9;", .int(10)),
+      ("9; return 2 * 5; 9;", .int(10)),
+      (
+        """
+        if (10 > 1) {
+          if (10 > 1) {
+            return 10;
+          }
+          return 1;
+        }
+        """,
+        .int(10)
+      )
+    ])
+  }
 
   private func runTestCases(_ testCases: [(String, Object)]) throws {
     try testCases.forEach { input, result in

@@ -1,8 +1,9 @@
 import Foundation
 
-enum Object: Equatable, CustomStringConvertible {
+indirect enum Object: Equatable, CustomStringConvertible {
   case int(Int)
   case bool(Bool)
+  case `return`(Object)
   case null
   
   var description: String {
@@ -11,6 +12,8 @@ enum Object: Equatable, CustomStringConvertible {
       "\(int)"
     case let .bool(bool):
       "\(bool)"
+    case let .return(`return`):
+      `return`.description
     case .null:
       "null"
     }
@@ -22,6 +25,8 @@ enum Object: Equatable, CustomStringConvertible {
       true
     case let .bool(val):
       val
+    case let .return(`return`):
+      `return`.isTruthy
     case .null:
       false
     }
@@ -32,33 +37,46 @@ struct Evaluator {
   func eval(_ node: any Node) -> Object {
     switch node {
     case let program as Program:
-      return evalStatements(program.statements)
+      evalProgram(program)
     case let statement as ExpressionStatement:
-      return eval(statement.expression)
+      eval(statement.expression)
     case let statement as BlockStatement:
-      return evalStatements(statement.statements)
+      evalBlockStatement(statement)
+    case let statement as ReturnStatement:
+      .return(eval(statement.returnValue))
     case let exp as IntegerExpression:
-      return .int(exp.value)
+      .int(exp.value)
     case let exp as BooleanExpression:
-      return .bool(exp.value)
+      .bool(exp.value)
     case let exp as PrefixExpression:
-      let rhs = eval(exp.right)
-      return evalPrefixExpression(op: exp.op, rhs: rhs)
+      evalPrefixExpression(op: exp.op, rhs: eval(exp.right))
     case let exp as InfixExpression:
-      let lhs = eval(exp.left)
-      let rhs = eval(exp.right)
-      return evalInfixExpression(op: exp.op, lhs: lhs, rhs: rhs)
+      evalInfixExpression(op: exp.op, lhs: eval(exp.left), rhs: eval(exp.right))
     case let exp as IfExpression:
-      return evalIfExpression(exp)
+      evalIfExpression(exp)
     default:
-      return .null
+      .null
     }
   }
 
-  private func evalStatements(_ statements: [any Statement]) -> Object {
+  private func evalProgram(_ program: Program) -> Object {
     var res: Object = .null
-    for statement in statements {
+    for statement in program.statements {
       res = eval(statement)
+      if case let .return(returnValue) = res {
+        return returnValue
+      }
+    }
+    return res
+  }
+  
+  private func evalBlockStatement(_ block: BlockStatement) -> Object {
+    var res: Object = .null
+    for statement in block.statements {
+      res = eval(statement)
+      if case .return = res {
+        return res
+      }
     }
     return res
   }
