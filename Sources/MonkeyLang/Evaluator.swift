@@ -7,34 +7,49 @@ enum Object: Equatable, CustomStringConvertible {
   
   var description: String {
     switch self {
-    case .int(let int):
+    case let .int(int):
       "\(int)"
-    case .bool(let bool):
+    case let .bool(bool):
       "\(bool)"
     case .null:
       "null"
     }
   }
+  
+  var isTruthy: Bool {
+    switch self {
+    case .int:
+      true
+    case let .bool(val):
+      val
+    case .null:
+      false
+    }
+  }
 }
 
 struct Evaluator {
-  func eval(node: any Node) -> Object {
+  func eval(_ node: any Node) -> Object {
     switch node {
     case let program as Program:
       return evalStatements(program.statements)
     case let statement as ExpressionStatement:
-      return eval(node: statement.expression)
+      return eval(statement.expression)
+    case let statement as BlockStatement:
+      return evalStatements(statement.statements)
     case let exp as IntegerExpression:
       return .int(exp.value)
     case let exp as BooleanExpression:
       return .bool(exp.value)
     case let exp as PrefixExpression:
-      let rhs = eval(node: exp.right)
+      let rhs = eval(exp.right)
       return evalPrefixExpression(op: exp.op, rhs: rhs)
     case let exp as InfixExpression:
-      let lhs = eval(node: exp.left)
-      let rhs = eval(node: exp.right)
+      let lhs = eval(exp.left)
+      let rhs = eval(exp.right)
       return evalInfixExpression(op: exp.op, lhs: lhs, rhs: rhs)
+    case let exp as IfExpression:
+      return evalIfExpression(exp)
     default:
       return .null
     }
@@ -43,7 +58,7 @@ struct Evaluator {
   private func evalStatements(_ statements: [any Statement]) -> Object {
     var res: Object = .null
     for statement in statements {
-      res = eval(node: statement)
+      res = eval(statement)
     }
     return res
   }
@@ -61,8 +76,8 @@ struct Evaluator {
   
   private func evalBangOperatorExpression(rhs: Object) -> Object {
     switch rhs {
-    case .bool(let val):
-      return .bool(!val)
+    case let .bool(bool):
+      return .bool(!bool)
     case .null:
       return .bool(true)
     default:
@@ -117,6 +132,16 @@ struct Evaluator {
     case "!=":
       .bool(lhs != rhs)
     default:
+      .null
+    }
+  }
+  
+  private func evalIfExpression(_ exp: IfExpression) -> Object {
+    if eval(exp.condition).isTruthy {
+      eval(exp.consequence)
+    } else if let alternative = exp.alternative {
+      eval(alternative)
+    } else {
       .null
     }
   }

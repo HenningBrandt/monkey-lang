@@ -4,7 +4,7 @@ import Nimble
 
 final class EvaluatorTests: XCTestCase {
   func testEvalIntegerExpression() throws {
-    try [
+    try runTestCases([
       ("5", .int(5)),
       ("10", .int(10)),
       ("-5", .int(-5)),
@@ -20,13 +20,11 @@ final class EvaluatorTests: XCTestCase {
       ("3 * 3 * 3 + 10", .int(37)),
       ("3 * (3 * 3) + 10", .int(37)),
       ("(5 + 10 * 2 + 15 / 3) * 2 + -10", .int(50)),
-    ].forEach { (input: String, result: Object) in
-      try expect(Interpreter.interpret(input)).to(equal(result))
-    }
+    ])
   }
   
   func testEvalBooleanExpression() throws {
-    try [
+    try runTestCases([
       ("true", .bool(true)),
       ("false", .bool(false)),
       ("1 < 2", .bool(true)),
@@ -42,20 +40,34 @@ final class EvaluatorTests: XCTestCase {
       ("true == false", .bool(false)),
       ("true != false", .bool(true)),
       ("false != true", .bool(true)),
-    ].forEach { (input: String, result: Object) in
-      try expect(Interpreter.interpret(input)).to(equal(result))
-    }
+    ])
   }
   
   func testBangOperator() throws {
-    try [
+    try runTestCases([
       ("!true", .bool(false)),
       ("!false", .bool(true)),
       ("!5", .bool(false)),
       ("!!true", .bool(true)),
       ("!!false", .bool(false)),
       ("!!5", .bool(true)),
-    ].forEach { (input: String, result: Object) in
+    ])
+  }
+  
+  func testIfElseExpression() throws {
+    try runTestCases([
+      ("if (true) { 10 }", .int(10)),
+      ("if (false) { 10 }", .null),
+      ("if (1) { 10 }", .int(10)),
+      ("if (1 < 2) { 10 }", .int(10)),
+      ("if (1 > 2) { 10 }", .null),
+      ("if (1 > 2) { 10 } else { 20 }", .int(20)),
+      ("if (1 < 2) { 10 } else { 20 }", .int(10)),
+    ])
+  }
+
+  private func runTestCases(_ testCases: [(String, Object)]) throws {
+    try testCases.forEach { input, result in
       try expect(Interpreter.interpret(input)).to(equal(result))
     }
   }

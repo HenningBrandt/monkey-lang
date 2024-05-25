@@ -7,6 +7,6 @@ enum Interpreter {
     let evaluator = Evaluator()
     
     let ast = try parser.parseProgram()
-    return evaluator.eval(node: ast)
+    return evaluator.eval(ast)
   }
 }
